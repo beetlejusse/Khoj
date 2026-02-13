@@ -1,0 +1,14 @@
+{
+  "id": "0013_add_postgis",
+  "prevId": "0012_fix_validation_trigger",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {},
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+}
