@@ -5,13 +5,15 @@ import {useState, useEffect, useRef} from 'react';
 import {MapPlaceDetails, Places} from "../types";
 import { PLACE_TYPE_COLORS} from '../lib/placesTypes';
 import { useSearchParams } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 
 export default function MapPage(){
+  const { isSignedIn } = useUser();
   const searchParams = useSearchParams();
   const placeIdFromUrl = searchParams.get('place');
   const mapRef = useRef<google.maps.Map | null>(null);
   
-  const [userLocation, setUserLocation]= useState<{lat: number, lng: number}>({lat: 28.6129, lng:77.2295});  //defaults to New Delhi
+  const [userLocation, setUserLocation]= useState<{lat: number, lng: number}>({lat: 28.6129, lng:77.2295});
   const [initialCenter, setInitialCenter] = useState<{lat: number, lng: number}>({lat: 28.6129, lng:77.2295});
   const [initialZoom, setInitialZoom] = useState(12);
   const [places, setPlaces]=useState([]);
@@ -19,6 +21,10 @@ export default function MapPage(){
   const [placeDetails, setPlaceDetails] = useState<MapPlaceDetails | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [planningMode, setPlanningMode] = useState(false);
+  const [selectedPlaces, setSelectedPlaces] = useState<string[]>([]);
+  const [itinerary, setItinerary] = useState<any>(null);
+  const [generatingRoute, setGeneratingRoute] = useState(false);
    
   //this is to get the user's location
   useEffect(()=>{
@@ -89,11 +95,52 @@ export default function MapPage(){
     setTimeout(()=>{
       setSelectedPlace(null);
       setPlaceDetails(null);
-    }, 300)  //wating for closing transiiton to complete
+    }, 300)
   }
+
+  const togglePlaceSelection = (placeId: string) => {
+    setSelectedPlaces(prev => 
+      prev.includes(placeId) 
+        ? prev.filter(id => id !== placeId)
+        : [...prev, placeId]
+    );
+  };
+
+  const generateRoute = async () => {
+    if (selectedPlaces.length < 2) return;
+    
+    setGeneratingRoute(true);
+    try {
+      const response = await axios.post('/api/itinerary', {
+        placeIds: selectedPlaces,
+        startTime: '09:00'
+      });
+      setItinerary(response.data);
+      setSidebarOpen(true);
+    } catch (error) {
+      console.error('Failed to generate route:', error);
+    }
+    setGeneratingRoute(false);
+  };
+
+  const exitPlanning = () => {
+    setPlanningMode(false);
+    setSelectedPlaces([]);
+    setItinerary(null);
+  };
 
   return(
     <div className='relative w-full h-full overflow-hidden'>
+      {planningMode && (
+        <div style={{position:'absolute',top:'16px',left:'50%',transform:'translateX(-50%)',zIndex:50,background:'#fff',color:'#000',padding:'12px 24px',borderRadius:'8px',boxShadow:'0 2px 8px rgba(0,0,0,0.15)',display:'flex',gap:'16px',alignItems:'center'}}>
+          <span>{selectedPlaces.length} selected</span>
+          <button onClick={exitPlanning} style={{padding:'6px 12px',border:'1px solid #ddd',borderRadius:'4px',background:'#fff'}}>Cancel</button>
+          <button onClick={generateRoute} disabled={selectedPlaces.length < 2 || generatingRoute} style={{padding:'6px 12px',background:selectedPlaces.length < 2 ? '#ccc' : '#000',color:'#fff',borderRadius:'4px',border:'none',cursor:selectedPlaces.length < 2 ? 'not-allowed' : 'pointer'}}>
+            {generatingRoute ? 'Generating...' : 'Chart Route'}
+          </button>
+        </div>
+      )}
+
       <APIProvider apiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!}>
         <Map
         key={`${initialCenter.lat}-${initialCenter.lng}`}
@@ -104,23 +151,48 @@ export default function MapPage(){
         gestureHandling='greedy'
         disableDefaultUI= {false}>
         
-        {/*user marker*/}
         <Marker position={userLocation}/>
 
-        {/*places marker*/}
         {places.map((place:Places)=> {
+          const isSelected = selectedPlaces.includes(place.placeId);
+          const routeIndex = itinerary?.route.indexOf(place.placeId);
+          
           return(
             <AdvancedMarker 
             key={place.placeId} 
             position={{lat: place.lat, lng: place.lng}} 
             onClick={()=>{
-              setSelectedPlace(place);
+              if (planningMode) {
+                togglePlaceSelection(place.placeId);
+              } else {
+                setSelectedPlace(place);
+              }
             }}>
-              <Pin
-                background={PLACE_TYPE_COLORS[place.type as keyof (typeof PLACE_TYPE_COLORS)] ?? "#95A5A6"}
-                glyphColor='white'
-                scale= {selectedPlace?.placeId == place.placeId? 1.3 : 1}
-              />
+              {planningMode ? (
+                <div style={{position:'relative'}}>
+                  <Pin
+                    background={isSelected ? '#4CAF50' : PLACE_TYPE_COLORS[place.type as keyof (typeof PLACE_TYPE_COLORS)] ?? "#95A5A6"}
+                    glyphColor='white'
+                    scale={isSelected ? 1.3 : 1}
+                  />
+                  {isSelected && (
+                    <div style={{position:'absolute',top:'-8px',right:'-8px',background:'#fff',borderRadius:'50%',width:'20px',height:'20px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:'bold',border:'2px solid #4CAF50'}}>
+                      ✓
+                    </div>
+                  )}
+                  {routeIndex !== -1 && routeIndex !== undefined && (
+                    <div style={{position:'absolute',top:'-12px',left:'50%',transform:'translateX(-50%)',background:'#000',color:'#fff',borderRadius:'50%',width:'24px',height:'24px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:'bold'}}>
+                      {routeIndex + 1}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Pin
+                  background={PLACE_TYPE_COLORS[place.type as keyof (typeof PLACE_TYPE_COLORS)] ?? "#95A5A6"}
+                  glyphColor='white'
+                  scale= {selectedPlace?.placeId == place.placeId? 1.3 : 1}
+                />
+              )}
             </AdvancedMarker>
           )
         })};
@@ -160,7 +232,37 @@ export default function MapPage(){
 
           {/* content */}
           <div className="overflow-y-auto h-[calc(100%-80px)] md:h-[calc(100%-56px)]">
-            {loadingDetails ? (
+            {itinerary ? (
+              <div style={{padding:'20px'}}>
+                <div style={{marginBottom:'16px',paddingBottom:'16px',borderBottom:'1px solid #333'}}>
+                  <div style={{fontSize:'18px',fontWeight:'bold',marginBottom:'8px'}}>Your Route - {itinerary.route.length} places</div>
+                  <div style={{fontSize:'14px',color:'#888'}}>
+                    Total: {Math.floor(itinerary.totalTime / 60)}h {itinerary.totalTime % 60}m | {(itinerary.totalDistance / 1000).toFixed(1)} km
+                  </div>
+                </div>
+                
+                {itinerary.timeline.map((item: any, idx: number) => (
+                  <div key={idx} style={{marginBottom:'16px'}}>
+                    {item.type === 'visit' ? (
+                      <div style={{padding:'12px',background:'#1a1a1a',borderRadius:'8px'}}>
+                        <div style={{fontSize:'16px',fontWeight:'bold',marginBottom:'4px'}}>{idx / 2 + 1}. {item.placeName}</div>
+                        <div style={{fontSize:'14px',color:'#888',marginBottom:'4px'}}>{item.arrivalTime} - {item.departureTime}</div>
+                        <div style={{fontSize:'12px',color:'#666'}}>Visit duration: {item.visitDuration} min</div>
+                      </div>
+                    ) : (
+                      <div style={{padding:'8px 12px',fontSize:'14px',color:'#888',display:'flex',alignItems:'center',gap:'8px'}}>
+                        <span>↓</span>
+                        <span>{item.duration} min ({(item.distance / 1000).toFixed(1)} km)</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+                
+                <button onClick={exitPlanning} style={{width:'100%',padding:'12px',background:'#fff',color:'#000',borderRadius:'8px',border:'none',fontWeight:'bold',marginTop:'16px',cursor:'pointer'}}>
+                  Exit Planning
+                </button>
+              </div>
+            ) : loadingDetails ? (
               <div className="p-5 space-y-4 animate-pulse">
                 <div className="h-44 bg-muted rounded-lg"/>
                 <div className="h-3 bg-muted rounded w-3/4"/>
@@ -260,6 +362,18 @@ export default function MapPage(){
 
                 {/* Action Buttons */}
                 <div className="flex gap-2 pt-2">
+                  {isSignedIn && !planningMode && (
+                    <button
+                      onClick={() => {
+                        setPlanningMode(true);
+                        setSelectedPlaces([selectedPlace!.placeId]);
+                        closeSidebar();
+                      }}
+                      className="flex-1 bg-foreground hover:bg-foreground/90 text-background text-center py-2.5 px-4 rounded-lg text-sm font-medium transition-colors"
+                    >
+                      Plan a Trip
+                    </button>
+                  )}
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${selectedPlace?.lat},${selectedPlace?.lng}&destination_place_id=${placeDetails.placeId}`}
                     target="_blank"
