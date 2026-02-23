@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { places, reelMetadata, user, userReels, userPlaces } from "./schema";
+import { places, reelMetadata, user, userReels, userPlaces, planningSessions, discoveredPlaces } from "./schema";
 
 export const reelMetadataRelations = relations(reelMetadata, ({one, many}) => ({
 	place: one(places, {
@@ -28,6 +28,7 @@ export const userReelsRelations = relations(userReels, ({one}) => ({
 export const userRelations = relations(user, ({many}) => ({
 	userReels: many(userReels),
 	userPlaces: many(userPlaces),
+	planningSessions: many(planningSessions),
 }));
 
 export const userPlacesRelations = relations(userPlaces, ({one}) => ({
@@ -38,5 +39,20 @@ export const userPlacesRelations = relations(userPlaces, ({one}) => ({
 	place: one(places, {
 		fields: [userPlaces.placeId],
 		references: [places.placeId]
+	}),
+}));
+
+export const discoveredPlacesRelations = relations(discoveredPlaces, ({one}) => ({
+	planningSession: one(planningSessions, {
+		fields: [discoveredPlaces.sessionId],
+		references: [planningSessions.id]
+	}),
+}));
+
+export const planningSessionsRelations = relations(planningSessions, ({one, many}) => ({
+	discoveredPlaces: many(discoveredPlaces),
+	user: one(user, {
+		fields: [planningSessions.userId],
+		references: [user.userId]
 	}),
 }));

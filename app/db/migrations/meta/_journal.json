@@ -99,6 +99,27 @@
       "when": 1770647000000,
       "tag": "0013_add_postgis",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1771505082093,
+      "tag": "0014_add_planning_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1771511431575,
+      "tag": "0015_clever_jetstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1771534960137,
+      "tag": "0016_colossal_satana",
+      "breakpoints": true
     }
   ]
 }
