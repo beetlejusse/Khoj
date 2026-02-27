@@ -10,6 +10,7 @@ interface DiscoveryParams {
   userId?: string;
   limit?: number;
   excludePlaceIds?: string[];
+  priorityPlaceTypes?: string[];
 }
 
 interface DiscoveredPlace {
@@ -37,53 +38,110 @@ function calculateRelevanceScore(
   place: any,
   interests: string[],
   source: string,
-  distanceFromTarget?: number
+  distanceFromTarget?: number,
+  priorityPlaceTypes?: string[]
 ): number {
   let score = 0;
+  const debugInfo: string[] = [];
 
   // MASSIVE boost for user's saved places - they should ALWAYS appear first
-  if (source === 'instagram') score += 100;
-  
-  // Proximity bonus (if near target location like Jama Masjid)
-  if (distanceFromTarget !== undefined) {
-    if (distanceFromTarget < 1) score += 40; // Within 1km
-    else if (distanceFromTarget < 3) score += 30; // Within 3km
-    else if (distanceFromTarget < 5) score += 20; // Within 5km
-    else if (distanceFromTarget < 10) score += 10; // Within 10km
+  if (source === 'instagram') {
+    score += 100;
+    debugInfo.push('Instagram save: +100');
   }
   
+  // Proximity bonus (if near target location)
+  if (distanceFromTarget !== undefined) {
+    if (distanceFromTarget < 1) {
+      score += 40;
+      debugInfo.push('Within 1km: +40');
+    } else if (distanceFromTarget < 3) {
+      score += 30;
+      debugInfo.push('Within 3km: +30');
+    } else if (distanceFromTarget < 5) {
+      score += 20;
+      debugInfo.push('Within 5km: +20');
+    } else if (distanceFromTarget < 10) {
+      score += 10;
+      debugInfo.push('Within 10km: +10');
+    }
+  }
+  
+  // Rating bonus (capped to prevent over-weighting)
   if (place.rating) {
-    score += Math.min(place.rating * 5, 25); // Reduced rating impact
+    const ratingBonus = Math.min(place.rating * 5, 25);
+    score += ratingBonus;
+    debugInfo.push(`Rating ${place.rating}: +${ratingBonus}`);
   }
 
-  const placeType = place.placeType || place.type || '';
+  const placeType = (place.placeType || place.type || '').toLowerCase();
   const placeName = (place.placeName || place.displayName || '').toLowerCase();
   
+  // DYNAMIC PRIORITY BOOST: Heavily weight what user asked for in latest message
+  // This is the key to making the system context-aware
+  if (priorityPlaceTypes && priorityPlaceTypes.length > 0) {
+    let priorityMatched = false;
+    
+    for (const priorityType of priorityPlaceTypes) {
+      const priorityLower = priorityType.toLowerCase();
+      
+      // Check if place matches the priority type
+      if (placeType.includes(priorityLower) || placeName.includes(priorityLower)) {
+        // HUGE boost - this is what user explicitly wants RIGHT NOW
+        score += 60;
+        priorityMatched = true;
+        debugInfo.push(`🎯 PRIORITY MATCH "${priorityType}": +60`);
+        break; // Only apply once per place
+      }
+    }
+    
+    // If place doesn't match priority, apply penalty to push it down
+    // This ensures priority places dominate the results
+    if (!priorityMatched && priorityPlaceTypes.length > 0) {
+      score -= 20;
+      debugInfo.push(`Not priority type: -20`);
+    }
+  }
+  
+  // General interest matching (smaller boost than priority)
   for (const interest of interests) {
     const interestLower = interest.toLowerCase();
     if (placeType.includes(interestLower) || placeName.includes(interestLower)) {
-      score += 15;
+      score += 10;
+      debugInfo.push(`Interest match "${interest}": +10`);
     }
+  }
+
+  // Log scoring breakdown for debugging
+  if (debugInfo.length > 0) {
+    console.log(`  Score breakdown for "${place.placeName || place.displayName}": ${debugInfo.join(', ')} = ${score}`);
   }
 
   return score;
 }
 
 export async function discoverPlaces(params: DiscoveryParams): Promise<DiscoveredPlace[]> {
-  const { region, interests, userId, limit = 30, excludePlaceIds = [] } = params;
+  const { region, interests, userId, limit = 30, excludePlaceIds = [], priorityPlaceTypes = [] } = params;
 
   const allPlaces: DiscoveredPlace[] = [];
 
   console.log('=== DISCOVERY: Starting place discovery ===');
   console.log('Region:', region);
   console.log('Interests:', interests);
+  console.log('Priority place types (from latest message):', priorityPlaceTypes);
   console.log('UserId:', userId);
   console.log('Limit:', limit);
   console.log('Exclude IDs:', excludePlaceIds);
+  
+  if (priorityPlaceTypes.length > 0) {
+    console.log('⚡ PRIORITY MODE: Results will be heavily weighted toward:', priorityPlaceTypes.join(', '));
+  }
 
-  // Step 1: Get target location coordinates (if region is a specific place like "Jama Masjid")
+  // Step 1: Get target location coordinates and determine search radius
   let targetLat: number | undefined;
   let targetLng: number | undefined;
+  let searchRadius = 5000; // Default 5km for specific places
+  let isCity = false;
   
   console.log('\n=== DISCOVERY: Finding target location ===');
   try {
@@ -96,7 +154,7 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
       {
         otherArgs: {
           headers: {
-            'X-Goog-FieldMask': 'places.location,places.displayName'
+            'X-Goog-FieldMask': 'places.location,places.displayName,places.types'
           }
         }
       }
@@ -105,16 +163,28 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
     if (locationResponse.places?.[0]?.location) {
       targetLat = locationResponse.places[0].location.latitude;
       targetLng = locationResponse.places[0].location.longitude;
-      console.log(`Target location found: ${locationResponse.places[0].displayName?.text}`);
+      
+      // Check if it's a city/locality (broader search) or specific place (narrow search)
+      const types = locationResponse.places[0].types || [];
+      isCity = types.some(t => ['locality', 'administrative_area_level_2', 'administrative_area_level_1'].includes(t));
+      
+      if (isCity) {
+        searchRadius = 20000; // 20km for cities
+        console.log(`Target is a city: ${locationResponse.places[0].displayName?.text}, using ${searchRadius/1000}km radius`);
+      } else {
+        searchRadius = 5000; // 5km for specific places
+        console.log(`Target is a specific place: ${locationResponse.places[0].displayName?.text}, using ${searchRadius/1000}km radius`);
+      }
+      
       console.log(`Coordinates: ${targetLat}, ${targetLng}`);
     }
   } catch (error) {
     console.log('Could not find specific target location, will use text matching');
   }
 
-  // Step 2: Get ALL user saved places (no filtering yet)
+  // Step 2: Get user saved places that match the destination
   if (userId) {
-    console.log('\n=== DISCOVERY: Querying ALL user saved places ===');
+    console.log('\n=== DISCOVERY: Querying user saved places ===');
     
     const userPlacesData = await db
       .select({
@@ -130,11 +200,7 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
       .where(eq(userPlaces.userId, userId));
 
     console.log('Total user places found:', userPlacesData.length);
-    console.log('User places:', userPlacesData.map(p => p.placeName).join(', '));
 
-    // Step 3: Calculate distance and relevance for each user place
-    console.log('\n=== DISCOVERY: Processing user places ===');
-    
     for (const place of userPlacesData) {
       if (excludePlaceIds.includes(place.placeId)) {
         console.log(`Skipping ${place.placeName} - in exclude list`);
@@ -144,34 +210,23 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
       let distance: number | undefined;
       if (targetLat && targetLng && place.lat && place.lng) {
         distance = calculateDistance(targetLat, targetLng, place.lat, place.lng);
-        console.log(`${place.placeName}: ${distance.toFixed(2)}km from target`);
       }
 
-      // Check if place matches region by text OR proximity
+      // STRICT matching: Address must contain the region name
       const regionLower = region.toLowerCase();
       const addressLower = (place.formattedAddress || '').toLowerCase();
-      const placeNameLower = (place.placeName || '').toLowerCase();
       
-      // Split region into words for flexible matching (e.g., "jama masjid" matches "jama" or "masjid")
-      const regionWords = regionLower.split(/\s+/).filter(w => w.length > 3);
+      // Extract city name from region (e.g., "Varanasi" from "Jama Masjid, Varanasi")
+      const regionParts = regionLower.split(',').map(p => p.trim());
+      const cityName = regionParts[regionParts.length - 1] || regionLower;
       
-      const textMatch = addressLower.includes(regionLower) || 
-                       placeNameLower.includes(regionLower) ||
-                       regionWords.some(word => addressLower.includes(word) || placeNameLower.includes(word));
+      const addressContainsCity = addressLower.includes(cityName);
+      const withinRadius = distance !== undefined && distance < (searchRadius / 1000);
       
-      // STRICTER proximity match - only within 50km (not 10km like before)
-      const proximityMatch = distance !== undefined && distance < 50;
-      
-      // IMPORTANT: For user places, require BOTH text match in address AND proximity
-      // This prevents showing "City Palace Delhi" when searching for "City Palace Udaipur"
-      const addressContainsRegion = addressLower.includes(regionLower) || 
-                                    regionWords.some(word => addressLower.includes(word));
-      
-      if ((addressContainsRegion && proximityMatch) || (textMatch && distance !== undefined && distance < 10)) {
-        const relevanceScore = calculateRelevanceScore(place, interests, 'instagram', distance);
+      if (addressContainsCity && withinRadius) {
+        const relevanceScore = calculateRelevanceScore(place, interests, 'instagram', distance, priorityPlaceTypes);
         
-        const matchReason = textMatch ? 'text match' : 'proximity match';
-        console.log(`✅ Adding ${place.placeName} (score: ${relevanceScore}, distance: ${distance?.toFixed(2) || 'N/A'}km, reason: ${matchReason})`);
+        console.log(`✅ Adding ${place.placeName} (score: ${relevanceScore}, distance: ${distance?.toFixed(2)}km)`);
         
         allPlaces.push({
           placeId: place.placeId,
@@ -185,7 +240,7 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
           relevanceScore
         });
       } else {
-        console.log(`❌ Skipping ${place.placeName} - no match (distance: ${distance?.toFixed(2) || 'N/A'}km, address: ${addressLower.substring(0, 50)}...)`);
+        console.log(`❌ Skipping ${place.placeName} - not in ${cityName} (distance: ${distance?.toFixed(2)}km, address: ${addressLower})`);
       }
     }
     
@@ -196,8 +251,18 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
   
   // Make queries very specific to the target location
   const interestQueries = interests.length > 0 
-    ? interests.map(interest => `${interest} near ${region}`)
-    : [`popular places near ${region}`, `things to do near ${region}`];
+    ? interests.map(interest => `${interest} in ${region}`)
+    : [`popular places in ${region}`, `things to do in ${region}`];
+  
+  // Add specific queries for priority place types
+  if (priorityPlaceTypes.length > 0) {
+    for (const priorityType of priorityPlaceTypes) {
+      // Add specific query for this priority type
+      interestQueries.unshift(`${priorityType} in ${region}`);
+      interestQueries.unshift(`famous ${priorityType} ${region}`);
+      interestQueries.unshift(`best ${priorityType} ${region}`);
+    }
+  }
   
   // Add specific local specialties if it's a food query
   if (interests.includes('food') || interests.includes('restaurant')) {
@@ -205,13 +270,13 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
     interestQueries.push(`street food ${region}`);
   }
 
-  console.log('Google queries to execute:', interestQueries.slice(0, 4));
+  console.log('Google queries to execute:', interestQueries.slice(0, 6));
 
-  for (const query of interestQueries.slice(0, 4)) {
+  for (const query of interestQueries.slice(0, 6)) {
     try {
       console.log(`\nExecuting Google query: "${query}"`);
       
-      // Build search request with location bias if we have target coordinates
+      // Build search request with location bias
       const searchRequest: any = {
         textQuery: query,
         languageCode: 'en',
@@ -226,10 +291,10 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
               latitude: targetLat,
               longitude: targetLng
             },
-            radius: 10000 // 10km radius
+            radius: searchRadius
           }
         };
-        console.log(`Using location bias: ${targetLat}, ${targetLng} (10km radius)`);
+        console.log(`Using location bias: ${targetLat}, ${targetLng} (${searchRadius/1000}km radius)`);
       }
       
       const [response] = await client.searchText(
@@ -252,10 +317,9 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
 
           const existingIndex = allPlaces.findIndex(p => p.placeId === place.id);
           if (existingIndex >= 0) {
-            // IMPORTANT: Keep source as 'instagram' if it was user's saved place
             if (allPlaces[existingIndex].source === 'instagram') {
               console.log(`Place "${place.displayName?.text}" is user's saved place, keeping as instagram`);
-              allPlaces[existingIndex].relevanceScore += 20; // Boost for being in both
+              allPlaces[existingIndex].relevanceScore += 20;
             } else {
               console.log(`Place "${place.displayName?.text}" already exists, marking as combined`);
               allPlaces[existingIndex].source = 'combined';
@@ -264,7 +328,7 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
             continue;
           }
 
-          // Calculate distance from target for proximity filtering
+          // Calculate distance from target
           let distanceFromTarget: number | undefined;
           if (targetLat && targetLng && place.location) {
             distanceFromTarget = calculateDistance(
@@ -274,8 +338,8 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
             );
           }
 
-          // Only include Google places that are NEAR the target location (within 3km)
-          if (distanceFromTarget !== undefined && distanceFromTarget > 3) {
+          // Only include Google places within the search radius
+          if (distanceFromTarget !== undefined && distanceFromTarget > (searchRadius / 1000)) {
             console.log(`Skipping "${place.displayName?.text}" - too far (${distanceFromTarget.toFixed(2)}km)`);
             continue;
           }
@@ -293,11 +357,11 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
               ...place,
               displayName: place.displayName?.text,
               type: getType(place.types)
-            }, interests, 'google', distanceFromTarget),
+            }, interests, 'google', distanceFromTarget, priorityPlaceTypes),
             photoReference: place.photos?.[0]?.name
           };
 
-          console.log(`Adding Google place: "${placeData.placeName}" (score: ${placeData.relevanceScore}, distance: ${distanceFromTarget?.toFixed(2) || 'N/A'}km)`);
+          console.log(`Adding Google place: "${placeData.placeName}" (score: ${placeData.relevanceScore}, distance: ${distanceFromTarget?.toFixed(2)}km)`);
           allPlaces.push(placeData);
         }
       }
@@ -306,38 +370,37 @@ export async function discoverPlaces(params: DiscoveryParams): Promise<Discovere
     }
   }
 
-  // Step 4: Web search for local recommendations from blogs/articles
-  console.log('\n=== DISCOVERY: Web search for local recommendations ===');
-  try {
-    const webSearchQuery = `best places to eat at ${region} hidden gems local favorites`;
-    console.log('Web search query:', webSearchQuery);
-    
-    // Note: Web search would be implemented here using a search API
-    // For now, we'll use the LLM's knowledge + Google Places as primary sources
-    // Future enhancement: Integrate with web search API to find blog recommendations
-    
-  } catch (error) {
-    console.error('Web search error:', error);
-  }
-
   console.log('\n=== DISCOVERY: Deduplicating and sorting ===');
   console.log('Total places before deduplication:', allPlaces.length);
-  console.log('Instagram places:', allPlaces.filter(p => p.source === 'instagram').length);
-  console.log('Google places:', allPlaces.filter(p => p.source === 'google').length);
-  console.log('Combined places:', allPlaces.filter(p => p.source === 'combined').length);
 
   const deduplicatedPlaces = deduplicatePlaces(allPlaces);
   console.log('Places after deduplication:', deduplicatedPlaces.length);
   
+  // Sort by relevance score (highest first)
   deduplicatedPlaces.sort((a, b) => b.relevanceScore - a.relevanceScore);
-  console.log('Places sorted by relevance');
 
   const finalPlaces = deduplicatedPlaces.slice(0, limit);
+  
   console.log('\n=== DISCOVERY: Final results ===');
   console.log('Returning', finalPlaces.length, 'places');
-  console.log('Top 5 places:');
-  finalPlaces.slice(0, 5).forEach((p, i) => {
-    console.log(`  ${i + 1}. ${p.placeName} (${p.source}, score: ${p.relevanceScore})`);
+  
+  if (priorityPlaceTypes.length > 0) {
+    const priorityCount = finalPlaces.filter(p => {
+      const placeType = p.placeType.toLowerCase();
+      const placeName = p.placeName.toLowerCase();
+      return priorityPlaceTypes.some(pt => placeType.includes(pt.toLowerCase()) || placeName.includes(pt.toLowerCase()));
+    }).length;
+    console.log(`✅ Priority places (${priorityPlaceTypes.join(', ')}): ${priorityCount}/${finalPlaces.length}`);
+  }
+  
+  console.log('\nTop 10 places by relevance:');
+  finalPlaces.slice(0, 10).forEach((p, i) => {
+    const isPriority = priorityPlaceTypes.some(pt => 
+      p.placeType.toLowerCase().includes(pt.toLowerCase()) || 
+      p.placeName.toLowerCase().includes(pt.toLowerCase())
+    );
+    const marker = isPriority ? '🎯' : '  ';
+    console.log(`  ${marker} ${i + 1}. ${p.placeName} (${p.placeType}, ${p.source}, score: ${p.relevanceScore})`);
   });
 
   return finalPlaces;
