@@ -62,7 +62,7 @@ export default function SessionCard({ session, onClick }: SessionCardProps) {
       style={{
         background: 'rgba(255, 255, 255, 0.03)',
         backdropFilter: 'blur(10px)',
-        border: isFinalized ? '1px solid rgba(74, 222, 128, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+        border: isFinalized ? '1px solid rgba(251, 146, 60, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
         borderRadius: '12px',
         overflow: 'hidden',
         cursor: 'pointer',
@@ -76,14 +76,14 @@ export default function SessionCard({ session, onClick }: SessionCardProps) {
         e.currentTarget.style.transform = 'translateY(-4px)';
         e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
         e.currentTarget.style.borderColor = isFinalized 
-          ? 'rgba(74, 222, 128, 0.5)'
+          ? 'rgba(251, 146, 60, 0.5)'
           : 'rgba(255, 255, 255, 0.2)';
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.transform = 'translateY(0)';
         e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
         e.currentTarget.style.borderColor = isFinalized 
-          ? 'rgba(74, 222, 128, 0.3)'
+          ? 'rgba(251, 146, 60, 0.3)'
           : 'rgba(255, 255, 255, 0.1)';
       }}
     >
@@ -112,9 +112,9 @@ export default function SessionCard({ session, onClick }: SessionCardProps) {
                 borderRadius: '6px',
                 fontSize: '11px',
                 fontWeight: '600',
-                background: 'rgba(74, 222, 128, 0.15)',
-                border: '1px solid rgba(74, 222, 128, 0.3)',
-                color: '#4ade80',
+                background: 'rgba(251, 146, 60, 0.15)',
+                border: '1px solid rgba(251, 146, 60, 0.3)',
+                color: '#fb923c',
                 backdropFilter: 'blur(10px)'
               }}
             >

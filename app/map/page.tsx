@@ -291,12 +291,12 @@ export default function MapPage(){
               {planningMode ? (
                 <div style={{position:'relative'}}>
                   <Pin
-                    background={isSelected ? '#4CAF50' : PLACE_TYPE_COLORS[place.type as keyof (typeof PLACE_TYPE_COLORS)] ?? "#95A5A6"}
+                    background={isSelected ? '#F97316' : PLACE_TYPE_COLORS[place.type as keyof (typeof PLACE_TYPE_COLORS)] ?? "#95A5A6"}
                     glyphColor='white'
                     scale={isSelected ? 1.3 : 1}
                   />
                   {isSelected && (
-                    <div style={{position:'absolute',top:'-8px',right:'-8px',background:'#fff',borderRadius:'50%',width:'20px',height:'20px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:'bold',border:'2px solid #4CAF50'}}>
+                    <div style={{position:'absolute',top:'-8px',right:'-8px',background:'#fff',borderRadius:'50%',width:'20px',height:'20px',display:'flex',alignItems:'center',justifyContent:'center',fontSize:'12px',fontWeight:'bold',border:'2px solid #F97316'}}>
                       ✓
                     </div>
                   )}

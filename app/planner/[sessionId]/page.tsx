@@ -505,7 +505,7 @@ export default function PlannerPage() {
                         minWidth:'200px',
                         maxWidth:'200px',
                         background:'#1a1a1a',
-                        border: isKept ? '2px solid #4ade80' : '1px solid #333',
+                        border: isKept ? '2px solid #fb923c' : '1px solid #333',
                         borderRadius:'12px',
                         overflow:'hidden',
                         cursor:'pointer',
@@ -594,7 +594,7 @@ export default function PlannerPage() {
                               <div style={{
                                 flex:1,
                                 padding:'6px',
-                                background:'#4ade80',
+                                background:'#fb923c',
                                 color:'#000',
                                 borderRadius:'6px',
                                 fontSize:'12px',
@@ -700,8 +700,8 @@ export default function PlannerPage() {
           {finalItinerary && finalItinerary.daySchedules && (
             <div style={{marginBottom:'24px',marginTop:'32px'}}>
               {/* Header */}
-              <div style={{padding:'24px',background:'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',border:'2px solid #4ade80',borderRadius:'16px 16px 0 0',boxShadow:'0 4px 20px rgba(74, 222, 128, 0.2)'}}>
-                <div style={{fontSize:'24px',fontWeight:'bold',marginBottom:'8px',color:'#4ade80'}}>
+              <div style={{padding:'24px',background:'linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%)',border:'2px solid #fb923c',borderRadius:'16px 16px 0 0',boxShadow:'0 4px 20px rgba(251, 146, 60, 0.2)'}}>
+                <div style={{fontSize:'24px',fontWeight:'bold',marginBottom:'8px',color:'#fb923c'}}>
                   ✓ Your {finalItinerary.days}-Day Trip is Ready!
                 </div>
                 <div style={{fontSize:'18px',fontWeight:'bold',marginBottom:'8px',color:'#fff'}}>
@@ -713,13 +713,13 @@ export default function PlannerPage() {
               </div>
               
               {/* Day-by-Day Schedule */}
-              <div style={{background:'#0a0a0a',padding:'20px',borderLeft:'2px solid #4ade80',borderRight:'2px solid #4ade80'}}>
+              <div style={{background:'#0a0a0a',padding:'20px',borderLeft:'2px solid #fb923c',borderRight:'2px solid #fb923c'}}>
                 {finalItinerary.daySchedules.map((daySchedule: any, dayIndex: number) => (
                   <div key={daySchedule.day} style={{marginBottom: dayIndex < finalItinerary.daySchedules.length - 1 ? '48px' : '0'}}>
                     {/* Day Header */}
                     <div style={{
                       padding:'16px 20px',
-                      background:'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)',
+                      background:'linear-gradient(135deg, #fb923c 0%, #f97316 100%)',
                       color:'#000',
                       borderRadius:'12px',
                       marginBottom:'24px',
@@ -742,7 +742,7 @@ export default function PlannerPage() {
                         <div style={{
                           display:'inline-block',
                           padding:'8px 16px',
-                          background:'#4ade80',
+                          background:'#fb923c',
                           color:'#000',
                           borderRadius:'20px',
                           fontSize:'14px',
@@ -780,7 +780,7 @@ export default function PlannerPage() {
                             <div style={{fontSize:'14px',color:'#888',marginBottom:'8px'}}>
                               📍 {item.place.formattedAddress}
                             </div>
-                            <div style={{fontSize:'14px',color:'#4ade80',marginBottom:'8px'}}>
+                            <div style={{fontSize:'14px',color:'#fb923c',marginBottom:'8px'}}>
                               ⏱️ {item.duration} minutes • {item.timeSlot}
                             </div>
                             {item.travelTime > 0 && (
@@ -800,7 +800,7 @@ export default function PlannerPage() {
               </div>
               
               {/* Footer */}
-              <div style={{padding:'20px',background:'#1a1a1a',border:'2px solid #4ade80',borderRadius:'0 0 16px 16px',borderTop:'none'}}>
+              <div style={{padding:'20px',background:'#1a1a1a',border:'2px solid #fb923c',borderRadius:'0 0 16px 16px',borderTop:'none'}}>
                 <div style={{fontSize:'14px',color:'#888',textAlign:'center'}}>
                   🎉 Have an amazing trip! Save this itinerary or share it with your travel companions.
                 </div>
