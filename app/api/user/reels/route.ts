@@ -4,6 +4,8 @@ import { userReels, reelMetadata } from '@/app/db/schema';
 import { auth } from '@clerk/nextjs/server';
 import { eq, desc } from 'drizzle-orm';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   try {
     const { userId } = await auth();
