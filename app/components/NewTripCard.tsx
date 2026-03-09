@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 interface NewTripCardProps {
   onClick: () => void;
@@ -8,42 +8,24 @@ export default function NewTripCard({ onClick }: NewTripCardProps) {
   return (
     <div
       onClick={onClick}
-      style={{
-        background: 'rgba(255, 255, 255, 0.03)',
-        backdropFilter: 'blur(10px)',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
-        padding: '20px 24px',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        maxWidth: '600px',
-        margin: '0 auto'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
-      }}
+      className="glass-effect rounded-2xl p-6 cursor-pointer hover-lift smooth-transition max-w-2xl mx-auto group relative overflow-hidden"
     >
-      <div style={{ fontSize: '24px', opacity: 0.8 }}>💬</div>
-      <div style={{ flex: 1 }}>
-        <div
-          style={{
-            fontSize: '14px',
-            color: 'rgba(255, 255, 255, 0.5)',
-            fontStyle: 'italic'
-          }}
-        >
-          Start planning a new itinerary now...
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-pink-500/10 opacity-0 group-hover:opacity-100 smooth-transition" />
+      
+      <div className="relative flex items-center gap-5">
+        <div className="text-4xl group-hover:scale-110 smooth-transition">✨</div>
+        <div className="flex-1">
+          <div className="text-xl font-bold mb-1 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Start a New Adventure
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Let AI help you plan the perfect itinerary
+          </div>
+        </div>
+        <div className="text-2xl opacity-50 group-hover:opacity-100 group-hover:translate-x-1 smooth-transition">
+          →
         </div>
       </div>
-      <div style={{ fontSize: '20px', opacity: 0.5 }}>→</div>
     </div>
   );
 }

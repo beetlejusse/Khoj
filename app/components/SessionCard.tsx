@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 interface SessionCardProps {
   session: {
@@ -18,14 +18,14 @@ interface SessionCardProps {
 }
 
 export default function SessionCard({ session, onClick }: SessionCardProps) {
-  const isFinalized = session.status === 'finalized';
-  
+  const isFinalized = session.status === "finalized";
+
   const formatDate = (date: Date | null) => {
-    if (!date) return '';
-    return new Date(date).toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric',
-      year: 'numeric'
+    if (!date) return "";
+    return new Date(date).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
@@ -33,9 +33,9 @@ export default function SessionCard({ session, onClick }: SessionCardProps) {
     const now = new Date();
     const diff = now.getTime() - new Date(date).getTime();
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Yesterday';
+
+    if (days === 0) return "Today";
+    if (days === 1) return "Yesterday";
     if (days < 7) return `${days} days ago`;
     if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
     return formatDate(date);
@@ -46,101 +46,57 @@ export default function SessionCard({ session, onClick }: SessionCardProps) {
       if (session.startDate) {
         return `Upcoming trip starting soon on ${formatDate(session.startDate)}`;
       }
-      return 'Upcoming trip - planned whenever you\'re ready';
+      return "Upcoming trip - planned whenever you're ready";
     }
-    // Never show just "0" - always show descriptive text
     if (session.approvedPlacesCount > 0) {
-      return `${session.approvedPlacesCount} ${session.approvedPlacesCount === 1 ? 'place' : 'places'} selected`;
+      return `${session.approvedPlacesCount} ${session.approvedPlacesCount === 1 ? "place" : "places"} selected`;
     }
-    return 'Just started';
+    return "Just started";
   };
 
-  // Use destination image or preview image
   const cardImage = session.destinationImage || session.previewImage;
 
   return (
     <div
       onClick={onClick}
-      style={{
-        background: 'rgba(255, 255, 255, 0.03)',
-        backdropFilter: 'blur(10px)',
-        border: isFinalized ? '1px solid rgba(251, 146, 60, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        position: 'relative',
-        height: '320px',
-        display: 'flex',
-        flexDirection: 'column'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'translateY(-4px)';
-        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
-        e.currentTarget.style.borderColor = isFinalized 
-          ? 'rgba(251, 146, 60, 0.5)'
-          : 'rgba(255, 255, 255, 0.2)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)';
-        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-        e.currentTarget.style.borderColor = isFinalized 
-          ? 'rgba(251, 146, 60, 0.3)'
-          : 'rgba(255, 255, 255, 0.1)';
-      }}
+      className={`glass-effect rounded-2xl overflow-hidden cursor-pointer hover-lift smooth-transition h-80 flex flex-col group relative ${
+        isFinalized ? 'border-orange-400/30' : ''
+      }`}
     >
-      {/* Preview Image / Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 smooth-transition pointer-events-none" />
+      
       <div
+        className="h-44 flex flex-col justify-between p-4 relative overflow-hidden"
         style={{
-          height: '180px',
           backgroundImage: cardImage
-            ? `linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.8)), url(${cardImage})`
-            : 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          padding: '16px',
-          position: 'relative'
+            ? `linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7)), url(${cardImage})`
+            : "linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
         }}
       >
-        {/* Status Badge - Only for finalized */}
-        {isFinalized && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <div
-              style={{
-                padding: '6px 12px',
-                borderRadius: '6px',
-                fontSize: '11px',
-                fontWeight: '600',
-                background: 'rgba(251, 146, 60, 0.15)',
-                border: '1px solid rgba(251, 146, 60, 0.3)',
-                color: '#fb923c',
-                backdropFilter: 'blur(10px)'
-              }}
-            >
+        <div className="flex justify-end">
+          {isFinalized && (
+            <div className="glass-effect px-3 py-1.5 rounded-lg text-xs font-semibold text-orange-400 border border-orange-400/30">
               ✓ Finalized
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Destination */}
         <div>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#fff', marginBottom: '4px' }}>
+          <div className="text-2xl font-bold text-white mb-1 drop-shadow-lg">
             {session.destination}
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <div className="p-4 flex-1 flex flex-col justify-between relative z-10">
         <div>
-          <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', color: '#fff' }}>
+          <div className="text-lg font-bold mb-2 text-white">
             {session.title}
           </div>
-          
-          <div style={{ fontSize: '13px', color: '#888', lineHeight: '1.5' }}>
+
+          <div className="text-sm text-muted-foreground leading-relaxed">
             {getStatusText()}
             {!isFinalized && (
               <span> • Updated {getTimeAgo(session.updatedAt)}</span>
@@ -148,18 +104,9 @@ export default function SessionCard({ session, onClick }: SessionCardProps) {
           </div>
         </div>
 
-        {/* Action hint */}
-        <div
-          style={{
-            fontSize: '12px',
-            fontWeight: '500',
-            color: 'rgba(255, 255, 255, 0.6)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
-          }}
-        >
-          {isFinalized ? 'View Itinerary' : 'Continue Planning'} →
+        <div className="text-xs font-medium text-muted-foreground flex items-center gap-1.5 group-hover:text-white smooth-transition">
+          <span>{isFinalized ? "View Itinerary" : "Continue Planning"}</span>
+          <span className="group-hover:translate-x-1 smooth-transition">→</span>
         </div>
       </div>
     </div>

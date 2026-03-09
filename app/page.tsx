@@ -1,113 +1,42 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { HeroSection } from "./components/landing/HeroSection";
+import { FeatureTabsSection } from "./components/landing/FeatureTabsSection";
+import { SocialProofSection } from "./components/landing/SocialProofSection";
+import { BentoGridSection } from "./components/landing/BentoGridSection";
+import DocumentationSection from "@/components/documentation-section";
+import TestimonialsSection from "@/components/testimonials-section";
+import FAQSection from "@/components/faq-section";
+import PricingSection from "@/components/pricing-section";
+import CTASection from "@/components/cta-section";
+import FooterSection from "@/components/footer-section";
 
-export default function Home() {
-  const [url, setUrl] = useState('');
-  const [data, setData] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const response = await fetch('/api/reel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
-      const result = await response.json();
-      setData(result);
-    } catch (error) {
-      console.error(error);
-      setData({ error: 'Failed to fetch' });
-    }
-    setLoading(false);
-  };
-
+export default function LandingPage() {
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      padding: '24px'
-    }}>
-      <div style={{ 
-        maxWidth: '500px', 
-        width: '100%',
-        padding: '32px',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
-        borderRadius: '12px',
-        background: 'rgba(255, 255, 255, 0.02)'
-      }}>
-        <h1 style={{ 
-          fontSize: '24px', 
-          fontWeight: 'bold', 
-          marginBottom: '24px',
-          textAlign: 'center'
-        }}>
-          Share Instagram Reel
-        </h1>
-        
-        <form onSubmit={handleSubmit} style={{ marginBottom: '24px' }}>
-          <input
-            type="text"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            placeholder="Enter Instagram reel URL"
-            required
-            style={{
-              width: '100%',
-              padding: '12px',
-              marginBottom: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              borderRadius: '8px',
-              background: 'rgba(255, 255, 255, 0.05)',
-              color: '#fff',
-              fontSize: '14px',
-              outline: 'none'
-            }}
-          />
-          <button 
-            type="submit" 
-            disabled={loading}
-            style={{
-              width: '100%',
-              padding: '12px',
-              border: 'none',
-              borderRadius: '8px',
-              background: loading ? '#333' : '#fff',
-              color: loading ? '#666' : '#000',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              cursor: loading ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {loading ? 'Loading...' : 'Get Metadata'}
-          </button>
-        </form>
-        
-        {data && (
-          <div style={{
-            padding: '16px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '8px',
-            background: 'rgba(255, 255, 255, 0.02)',
-            maxHeight: '400px',
-            overflow: 'auto'
-          }}>
-            <pre style={{ 
-              fontSize: '12px', 
-              lineHeight: '1.5',
-              margin: 0,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word'
-            }}>
-              {JSON.stringify(data, null, 2)}
-            </pre>
+    <div className="w-full bg-[#F8FAFC] selection:bg-blue-100/30 overflow-x-hidden flex flex-col justify-start items-center relative">
+      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-300/20 blur-[120px] pointer-events-none mix-blend-multiply animate-pulse duration-10000" />
+      <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] rounded-full bg-indigo-300/20 blur-[120px] pointer-events-none mix-blend-multiply animate-pulse duration-10000" />
+      <div className="absolute bottom-[-10%] left-[20%] w-[50%] h-[50%] rounded-full bg-purple-300/20 blur-[120px] pointer-events-none mix-blend-multiply animate-pulse duration-700" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-size-[24px_24px] pointer-events-none"></div>
+
+      <div className="relative flex flex-col justify-start items-center w-full z-10">
+        <div className="w-full max-w-none px-4 sm:px-6 md:px-8 lg:px-0 lg:max-w-[1060px] lg:w-[1060px] relative flex flex-col justify-start items-start">
+          <div className="w-px h-full absolute left-4 sm:left-6 md:left-8 lg:left-0 top-0 bg-[rgba(15,23,42,0.06)] shadow-[1px_0px_0px_white] z-0"></div>
+          <div className="w-px h-full absolute right-4 sm:right-6 md:right-8 lg:right-0 top-0 bg-[rgba(15,23,42,0.06)] shadow-[1px_0px_0px_white] z-0"></div>
+
+          <div className="self-stretch overflow-hidden border-b border-[rgba(55,50,47,0.06)] flex flex-col justify-center items-center gap-4 sm:gap-6 md:gap-8 lg:gap-[66px] relative z-10 w-full">
+            <HeroSection />
+            <FeatureTabsSection />
+            <SocialProofSection />
+            <BentoGridSection />
+            <DocumentationSection />
+            <TestimonialsSection />
+            <FAQSection />
+            <PricingSection />
+            <CTASection />
+            <FooterSection />
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
